@@ -1,0 +1,5 @@
+REN NEV INSTALL COMMAND
+
+irm "https://raw.githubusercontent.com/ren-nev/ren-nev-tweaking-utility/main/install.ps1" | iex
+
+If an older Ren Nev build is installed, run the same command again to repair/update it.
