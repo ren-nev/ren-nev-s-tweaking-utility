@@ -1,0 +1,44 @@
+name: Validate Ren Nev
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PowerShell files
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count) {
+              Write-Host "Syntax errors in $($_.FullName)" -ForegroundColor Red
+              $errors | ForEach-Object { Write-Host $_ }
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+      - name: Check required app files
+        shell: powershell
+        run: |
+          @(
+            'install.ps1',
+            'app\RenNev.ps1',
+            'app\Launcher.html',
+            'app\assets\rennev.ico',
+            'app\assets\rennev-logo.png'
+          ) | ForEach-Object {
+            if (-not (Test-Path $_)) { throw "Missing required file: $_" }
+          }
+      - name: Reject legacy launch patterns
+        shell: powershell
+        run: |
+          $text = Get-Content app\RenNev.ps1,app\Launcher.html -Raw
+          if ($text -match 'ExecutionPolicy\s+Bypass') { throw 'ExecutionPolicy Bypass returned to the runtime.' }
+          if ($text -match 'ActiveXObject\s*\(') { throw 'ActiveXObject returned to the runtime.' }
